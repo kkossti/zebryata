@@ -104,13 +104,12 @@ var DISK_URL="https://disk.yandex.ru/i/jgpvcCkEytiMiQ";
 
 var DATA={collected:52733,spent:28720,fee:3000,
 cats:[["Хозтовары",8165],["Подарки",7811],["Творчество",1544],["Угощение",1200]],
-status:{},
+status:{"абрамова":0,"акопян":0,"будник":0,"батенков":0,"ветрова":0,"нестерова":0,"игнатова":0,"карманова":0,"кошельник":0,"климков":0,"лазовская":0,"лысов":0,"караханов":0,"клепиков":0,"маслов":0,"минасян":0,"назаров":0,"ортукова":0,"семёнова":0,"семенова":0,"слобцова":1383,"стеценко":0,"урыта":0,"финашкина":252,"шарипов":252,"григорец":0,"точка":383,"ширенина":0},
 holidays:[["01.09.2026","Подарки детям на ДР","11 000","сделано"],["27.09.2026","День воспитателя","12 000","сделано"],["25.12.2026","Новогодний утренник","15 000","в плане"],["23.02.2027","День защитника Отечества","10 000","в плане"],["08.03.2027","Международный женский день","15 000","в плане"],["17.03.2027","День рождения воспитателя","8 000","в плане"],["21.05.2027","День рождения нянечки","8 000","в плане"]],
 months:[["Январь",2],["Февраль",2],["Март",2],["Апрель",0],["Май",4],["Июнь",0],["Июль",2],["Август",3],["Сентябрь",2],["Октябрь",5],["Ноябрь",5],["Декабрь",1]]};
 
 var COLORS=["#ff8fab","#7ec8e3","#b5e48c","#c8a2c8","#ffd166","#9bd0a5"];
 function fmt(n){return Math.round(n).toLocaleString("ru-RU")+" \u20BD"}
-function snip(s){s=String(s||"");return s.length>90?s.slice(0,90)+"…":s}
 function badge(t,c){var b=document.getElementById("sync");b.textContent=t;b.className=c}
 function render(){
  document.getElementById("c1").textContent=fmt(DATA.collected);
@@ -189,30 +188,41 @@ function apply(d){
  for(var k in d.status)DATA.status[k]=d.status[k];
  render();
 }
-function sync(){
- var API="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(DISK_URL);
- fetch(API,{cache:"no-store"})
- .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,body:t}})})
- .then(function(x){
- if(!x.ok)throw new Error("Диск ответил "+x.status);
- var j;try{j=JSON.parse(x.body)}catch(e){throw new Error("странное имя файла: "+snip(x.body))}
- if(j.error)throw new Error("Диск: "+j.error);
- if(!j.href)throw new Error("Диск не дал ссылку на файл");
- return fetch(j.href,{cache:"no-store"})})
- .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,body:t}})})
- .then(function(f){
- if(!f.ok)throw new Error("файл не скачался: "+f.status);
- var d=parse(f.body);
- if(d.collected>0||d.cats.length||Object.keys(d.status).length){
+function tryFile(url){
+ return fetch(url,{cache:"no-store"}).then(function(r){
+ if(!r.ok)throw new Error("файл не скачался: "+r.status);
+ return r.text()}).then(function(t){
+ var d=parse(t);
+ if(!(d.collected>0||d.cats.length||Object.keys(d.status).length))throw new Error("в файле нет строк вида collected=");
  apply(d);
  badge("обновлено с Диска: "+new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),"ok");
- }else{badge("файл скачался, но в нём нет строк вида collected=... Проверьте содержимое файла на Диске","err")}
+ });
+}
+function sync(tryN){
+ tryN=tryN||0;
+ var ep1="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(DISK_URL);
+ var ep2="https://cloud-api.yandex.net/v1/disk/public/resources?public_key="+encodeURIComponent(DISK_URL);
+ fetch(ep1,{cache:"no-store"})
+ .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,body:t}})})
+ .then(function(x){
+ var j=null;try{j=JSON.parse(x.body)}catch(e){}
+ if(x.ok&&j&&j.href)return fetch(j.href,{cache:"no-store"}).then(function(r){return r.text()});
+ // основной маршрут не сработал — пробуем метаданные: там есть прямая ссылка file
+ return fetch(ep2,{cache:"no-store"}).then(function(r){return r.text()}).then(function(t2){
+ var m=null;try{m=JSON.parse(t2)}catch(e){}
+ var f=m&&(m.file||(m._embedded&&m._embedded.file));
+ if(!f)throw new Error("Диск ответил "+x.status+" и метаданные не дали ссылку");
+ return fetch(f,{cache:"no-store"}).then(function(r){return r.text()});
+ });
  })
- .catch(function(e){badge(e.message+". Показаны запасные цифры","err")});
+ .then(function(txt){return tryFile(txt)})
+ .catch(function(e){
+ if(tryN<1){setTimeout(function(){sync(tryN+1)},30000);return}
+ badge(e.message+". Показаны запасные цифры","err");
+ });
 }
 render();
-sync();
-setInterval(sync,300000);
+if(!sessionStorage.getItem("synced")){sync();sessionStorage.setItem("synced","1")}
 </script>
 </body>
 </html>
