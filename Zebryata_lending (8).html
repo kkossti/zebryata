@@ -100,7 +100,10 @@ footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
 </div>
 
 <script>
-var DISK_URL="https://disk.yandex.ru/i/jgpvcCkEytiMiQ";
+// ============ ССЫЛКА НА ПАПКУ НА ДИСКЕ (постоянная, не менять) ============
+var DISK_URL="https://disk.yandex.ru/d/ptTBhsfZMhVHBg";
+var FILE_PATH="/Zebryata_data.txt";
+// ==========================================================================
 
 var DATA={collected:52733,spent:28720,fee:3000,
 cats:[["Хозтовары",8165],["Подарки",7811],["Творчество",1544],["Угощение",1200]],
@@ -188,41 +191,36 @@ function apply(d){
  for(var k in d.status)DATA.status[k]=d.status[k];
  render();
 }
-function tryFile(url){
- return fetch(url,{cache:"no-store"}).then(function(r){
- if(!r.ok)throw new Error("файл не скачался: "+r.status);
- return r.text()}).then(function(t){
- var d=parse(t);
+function tryFile(txt){
+ var d=parse(txt);
  if(!(d.collected>0||d.cats.length||Object.keys(d.status).length))throw new Error("в файле нет строк вида collected=");
  apply(d);
  badge("обновлено с Диска: "+new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),"ok");
- });
 }
 function sync(tryN){
  tryN=tryN||0;
- var ep1="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(DISK_URL);
- var ep2="https://cloud-api.yandex.net/v1/disk/public/resources?public_key="+encodeURIComponent(DISK_URL);
+ var ep1="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
+ var ep2="https://cloud-api.yandex.net/v1/disk/public/resources?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
  fetch(ep1,{cache:"no-store"})
  .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,body:t}})})
  .then(function(x){
  var j=null;try{j=JSON.parse(x.body)}catch(e){}
  if(x.ok&&j&&j.href)return fetch(j.href,{cache:"no-store"}).then(function(r){return r.text()});
- // основной маршрут не сработал — пробуем метаданные: там есть прямая ссылка file
  return fetch(ep2,{cache:"no-store"}).then(function(r){return r.text()}).then(function(t2){
  var m=null;try{m=JSON.parse(t2)}catch(e){}
- var f=m&&(m.file||(m._embedded&&m._embedded.file));
+ var f=m&&(m.file||(m._embedded&&m._embedded.items&&m._embedded.items[0]&&m._embedded.items[0].file));
  if(!f)throw new Error("Диск ответил "+x.status+" и метаданные не дали ссылку");
  return fetch(f,{cache:"no-store"}).then(function(r){return r.text()});
  });
  })
- .then(function(txt){return tryFile(txt)})
+ .then(function(txt){tryFile(txt)})
  .catch(function(e){
  if(tryN<1){setTimeout(function(){sync(tryN+1)},30000);return}
  badge(e.message+". Показаны запасные цифры","err");
  });
 }
 render();
-if(!sessionStorage.getItem("synced")){sync();sessionStorage.setItem("synced","1")}
+sync();
 </script>
 </body>
 </html>
