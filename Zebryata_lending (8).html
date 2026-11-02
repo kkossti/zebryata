@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Бюджет группы «Зебрята»</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Comic Sans MS','Segoe UI',sans-serif;background:#fff8ec;color:#3a2e2a;padding-bottom:30px}
+header{background:repeating-linear-gradient(135deg,#1c1c1c 0 20px,#fff 20px 40px);padding:20px 10px;text-align:center}
+header h1{color:#fff;text-shadow:0 2px 4px #000;font-size:26px}
+#zebra{font-size:72px;display:inline-block;animation:hop 1.6s ease-in-out infinite;cursor:pointer}
+@keyframes hop{0%,100%{transform:translateY(0)}30%{transform:translateY(-14px) rotate(-4deg)}60%{transform:translateY(0)}}
+.spin{animation:spin .6s linear!important}
+@keyframes spin{to{transform:rotate(360deg)}}
+#sync{margin-top:8px;font-size:13px;padding:4px 12px;border-radius:12px;display:inline-block;background:#e8e8e8;color:#666}
+#sync.ok{background:#d4f7d4;color:#1c7c1c}
+.wrap{max-width:640px;margin:0 auto;padding:0 14px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.card{border-radius:20px;padding:14px;text-align:center;box-shadow:0 3px 0 rgba(0,0,0,.12)}
+.card .n{font-size:22px;font-weight:bold;margin-top:4px}
+.card .t{font-size:13px;opacity:.85}
+.g1{background:#c9f2c7}.g2{background:#ffd6e0}.g3{background:#d6e6ff}.g4{background:#ffe4b8}
+section{background:#fff;border-radius:20px;padding:16px;margin:14px 0;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+section h2{font-size:18px;margin-bottom:10px}
+.parentbox{background:#fff3b8;border:3px dashed #e0a800}
+.parentbox input{width:100%;padding:12px;font-size:17px;border:2px solid #e0a800;border-radius:12px;margin:10px 0}
+.parentbox button{width:100%;padding:12px;font-size:17px;font-weight:bold;border:none;border-radius:12px;background:#e0a800;color:#fff}
+#result{margin-top:10px;font-size:16px;font-weight:bold;text-align:center}
+.restnote{margin-top:10px;font-size:14px;background:#fff;border-radius:12px;padding:8px 10px}
+.bar{background:#f0e6d8;border-radius:10px;height:24px;overflow:hidden;margin:8px 0}
+.bar span{display:block;height:100%;border-radius:10px;color:#fff;font-size:12px;line-height:24px;padding-left:8px;min-width:60px}
+#donut{width:150px;height:150px;border-radius:50%;margin:14px auto;position:relative;background:conic-gradient(#7ec8e3 0% 44%,#ff8fab 44% 86%,#b5e48c 86% 94%,#c8a2c8 94% 100%)}
+#donut::after{content:"";position:absolute;inset:35px;background:#fff;border-radius:50%}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:7px;border-bottom:1px solid #eee;text-align:left}
+.months{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.month{background:#fdf3e0;border-radius:14px;padding:10px;text-align:center;font-size:13px}
+.month.cur{background:#ffe4b8;outline:2px solid #e0a800}
+.done li{margin:8px 0;list-style:none}
+footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
+.confetti{position:fixed;top:-30px;font-size:22px;pointer-events:none;animation:fall 2.6s linear forwards;z-index:9}
+@keyframes fall{to{transform:translateY(105vh) rotate(720deg);opacity:.4}}
+</style>
+</head>
+<body>
+<header>
+<div id="zebra" onclick="this.classList.add('spin');setTimeout(()=>this.classList.remove('spin'),600)">🦓</div>
+<h1>Бюджет группы «Зебрята»</h1>
+<div id="sync">данные от 02.11.2026</div>
+</header>
+<div class="wrap">
+
+<div class="cards">
+<div class="card g1"><div class="t">🦓 Собрано</div><div class="n">52 733 ₽</div></div>
+<div class="card g2"><div class="t">🎈 Потрачено</div><div class="n">28 720 ₽</div></div>
+<div class="card g3"><div class="t">💰 Остаток</div><div class="n">24 013 ₽</div></div>
+<div class="card g4"><div class="t">🌟 Общий сбор</div><div class="n">3 000 ₽</div></div>
+</div>
+
+<section class="parentbox">
+<h2>🔎 Для родителей</h2>
+<p>Общий сбор — <b>3 000 ₽</b> на ребёнка. Но вы можете прислать <b>любую сумму</b> — мы её обязательно учтём! Если пока нет возможности внести весь сбор, переведите сколько удобно, остаток — позже.</p>
+<input id="fam" placeholder="Введите фамилию ребёнка (например: финаш)">
+<button onclick="check()">Проверить взнос</button>
+<div id="result"></div>
+<div class="restnote">💡 Осталось внести по всей группе: <b>2 522 ₽</b>. Перевод любой суммы — это уже помощь 💛</div>
+</section>
+
+<section>
+<h2>📊 Траты по категориям</h2>
+<p style="font-size:12px;color:#999;margin-bottom:8px">Данные на 02.11.2026</p>
+<div class="bar"><span style="width:44%;background:#7ec8e3">Хозтовары — 8 165 ₽ (44%)</span></div>
+<div class="bar"><span style="width:42%;background:#ff8fab">Подарки — 7 811 ₽ (42%)</span></div>
+<div class="bar"><span style="width:8%;background:#b5e48c">Творчество — 1 544 ₽ (8%)</span></div>
+<div class="bar"><span style="width:6%;background:#c8a2c8">Угощение — 1 200 ₽ (6%)</span></div>
+<div id="donut"></div>
+<p style="text-align:center;font-size:12px;color:#999">Итого потрачено: 18 720 ₽ · на 1 ребёнка: 1 025,71 ₽</p>
+</section>
+
+<section>
+<h2>🎉 План праздников</h2>
+<table>
+<tr><th>Дата</th><th>Событие</th><th>План</th><th>Статус</th></tr>
+<tr><td>01.09.2026</td><td>Подарки детям на ДР</td><td>11 000 ₽</td><td>подарили ✅</td></tr>
+<tr><td>27.09.2026</td><td>День воспитателя</td><td>12 000 ₽</td><td>поздравили ✅</td></tr>
+<tr><td>25.12.2026</td><td>Новогодний утренник</td><td>15 000 ₽</td><td>в плане</td></tr>
+<tr><td>23.02.2027</td><td>День защитника Отечества</td><td>10 000 ₽</td><td>в плане</td></tr>
+<tr><td>08.03.2027</td><td>Международный женский день</td><td>15 000 ₽</td><td>в плане</td></tr>
+<tr><td>17.03.2027</td><td>День рождения воспитателя</td><td>8 000 ₽</td><td>в плане</td></tr>
+<tr><td>21.05.2027</td><td>День рождения нянечки</td><td>8 000 ₽</td><td>в плане</td></tr>
+</table>
+</section>
+
+<section>
+<h2>🎂 Именинники по месяцам</h2>
+<div class="months">
+<div class="month">❄️ Январь<br><b>2</b> 🎂</div>
+<div class="month">❄️ Февраль<br><b>2</b> 🎂</div>
+<div class="month">🌷 Март<br><b>2</b> 🎂</div>
+<div class="month">🌷 Апрель<br><b>0</b></div>
+<div class="month">🌞 Май<br><b>4</b> 🎂</div>
+<div class="month">🌞 Июнь<br><b>0</b></div>
+<div class="month">🍉 Июль<br><b>2</b> 🎂</div>
+<div class="month">🍉 Август<br><b>3</b> 🎂</div>
+<div class="month">🍂 Сентябрь<br><b>2</b> 🎂</div>
+<div class="month">🍂 Октябрь<br><b>5</b> 🎂</div>
+<div class="month cur">🍁 Ноябрь<br><b>5</b> 🎂</div>
+<div class="month">🎄 Декабрь<br><b>1</b> 🎂</div>
+</div>
+<p style="font-size:12px;color:#999;margin-top:8px">Имена не публикуем — по правилам защиты персональных данных. Поздравить можно в чате группы!</p>
+</section>
+
+<section>
+<h2>✅ Что уже сделано мамы нашей группы</h2>
+<ul class="done">
+<li>🛠 Обновили группу: ковёр, швабра, коврик, звонок, метёлка</li>
+<li>🎁 Подарили детям: книжки, наклейки, пазлы, поп-ит</li>
+<li>🪣 Купили лопатки для прогулок</li>
+<li>💐 Поздравили воспитателя на День воспитателя</li>
+</ul>
+</section>
+
+<footer>Страничку сделала @kristinakossti 💛</footer>
+</div>
+
+<script>
+var FALLBACK={collected:52733,spent:28720,fee:3000,
+cats:[['Хозтовары',8165],['Подарки',7811],['Творчество',1544],['Угощение',1200]],
+status:{'абрамова':0,'акопян':0,'будник':0,'батенков':0,'ветрова':0,'нестерова':0,'игнатова':0,'карманова':0,'кошельник':0,'климков':0,'лазовская':0,'лысов':0,'караханов':0,'клепиков':0,'маслов':0,'минасян':0,'назаров':0,'ортукова':0,'семёнова':0,'семенова':0,'слобцова':1383,'стеценко':0,'урыта':0,'финашкина':252,'шарипов':252,'григорец':0,'точка':383,'ширенина':0}};
+
+var DATA=FALLBACK;
+function fmt(n){return n.toLocaleString('ru-RU')+' \u20BD'}
+function check(){
+ var v=document.getElementById('fam').value.trim().toLowerCase();
+ var r=document.getElementById('result');
+ if(!v){r.textContent='Введите фамилию 🙂';return}
+ var found=null;
+ for(var k in DATA.status){if(k.indexOf(v)>-1||v.indexOf(k)>-1){found=k;break}}
+ if(found===null){r.textContent='Фамилия не найдена — проверьте написание или напишите администратору';return}
+ var d=DATA.status[found];
+ if(d>0){r.textContent='🟠 Есть недоплата — '+fmt(d)+'. Можно прислать любую сумму — мы её учтём 💛'}
+ else{r.textContent='Всё сдано ✅';confetti()}
+}
+function confetti(){
+ var e=['\u{1F389}','\u2728','\u{1F49B}','\u{1F993}'];
+ for(var i=0;i<24;i++){var s=document.createElement('div');s.className='confetti';
+ s.textContent=e[i%e.length];
+ s.style.left=Math.random()*100+'vw';
+ s.style.animationDelay=(Math.random()*0.8)+'s';
+ document.body.appendChild(s);setTimeout(function(){s.remove()},3400)}
+}
+function parse(txt){
+ var d={collected:0,spent:0,fee:0,cats:[],status:{}},sec='';
+ txt.split(/\r?\n/).forEach(function(l){
+ l=l.trim();if(!l)return;
+ if(l[0]==='['){sec=l.replace(/[\[\]]/g,'').toUpperCase();return}
+ var p=l.split('=');if(p.length<2)return;var k=p[0].trim().toLowerCase(),v=p[1].trim();
+ if(sec==='ФИНАНСЫ'){if(k==='collected')d.collected=+v;if(k==='spent')d.spent=+v;if(k==='fee')d.fee=+v}
+ if(sec==='КАТЕГОРИИ')d.cats.push([k,+v]);
+ if(sec==='СТАТУСЫ')d.status[k]=+v});
+ return d;
+}
+function apply(d){
+ DATA.collected=d.collected||DATA.collected;
+ DATA.spent=d.spent||DATA.spent;
+ DATA.fee=d.fee||DATA.fee;
+ if(d.cats.length)DATA.cats=d.cats;
+ var st=d.status||{};for(var k in st)DATA.status[k]=st[k];
+ document.querySelector('.g1 .n').textContent=fmt(DATA.collected);
+ document.querySelector('.g2 .n').textContent=fmt(DATA.spent);
+ document.querySelector('.g3 .n').textContent=fmt(DATA.collected-DATA.spent);
+ document.querySelector('.g4 .n').textContent=fmt(DATA.fee);
+}
+async function sync(){
+ var b=document.getElementById('sync');
+ try{
+ var r=await fetch('https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key='+encodeURIComponent('https://disk.yandex.ru/i/jgpvcCkEytiMiQ'));
+ var j=await r.json();
+ var res=await fetch(j.href);var txt=await res.text();
+ var d=parse(txt);
+ if(d.collected>0){apply(d);b.textContent='обновлено с Диска: '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});b.className='ok'}
+ }catch(e){/* остаются вшитые данные */}
+}
+sync();
+</script>
+</body>
+</html>
