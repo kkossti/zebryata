@@ -29,3 +29,4 @@ jobs:
             git commit -m "Автообновление данных"
             git push
           fi
+          
