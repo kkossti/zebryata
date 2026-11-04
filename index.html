@@ -38,6 +38,7 @@ td,th{padding:7px;border-bottom:1px solid #eee;text-align:left}
 .month.cur{background:#ffe4b8;outline:2px solid #e0a800}
 .done li{margin:8px 0;list-style:none}
 footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
+footer a{color:#8a7a70;text-decoration:none}
 .confetti{position:fixed;top:-30px;font-size:22px;pointer-events:none;animation:fall 2.6s linear forwards;z-index:9}
 @keyframes fall{to{transform:translateY(105vh) rotate(720deg);opacity:.4}}
 </style>
@@ -87,7 +88,7 @@ footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
 <li>💐 Поздравили воспитателя на День воспитателя</li>
 </ul>
 </section>
-<footer>Страничку сделала @kristinakossti 💛</footer>
+<footer>Страничку сделала <a href="https://vk.com/kristinakossti" target="_blank">@kristinakossti</a> 💛</footer>
 </div>
 
 <script src="data.js"></script>
@@ -149,7 +150,7 @@ function check(){
   for(var k in DATA.status){if(k.indexOf(v)>-1||v.indexOf(k)>-1){found=k;break}}
   if(found===null){r.textContent="Фамилия не найдена — проверьте написание или напишите администратору";return}
   var d=DATA.status[found];
-  if(d>0){r.textContent="🟠 Есть недоплата — "+fmt(d)+". Можно прислать любую сумму — мы её учтём 💛"}
+  if(d>0){r.textContent="🟠 Есть недоплата — "+fmt(d)+". Можно прислать любую сумму — мы её учтём 💛"} 
   else{r.textContent="Всё сдано ✅";confetti()}
 }
 
