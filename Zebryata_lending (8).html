@@ -16,6 +16,7 @@ header h1{color:#fff;text-shadow:0 2px 4px #000;font-size:26px}
 #sync{margin-top:8px;font-size:12px;padding:4px 12px;border-radius:12px;display:inline-block;background:#e8e8e8;color:#666;max-width:95%;word-break:break-word}
 #sync.ok{background:#d4f7d4;color:#1c7c1c}
 #sync.err{background:#ffd6d6;color:#a11}
+#sync.dbg{background:#ffe8b8;color:#7a5500;font-size:11px;line-height:1.5;text-align:left}
 .wrap{max-width:640px;margin:0 auto;padding:0 14px}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
 .card{border-radius:20px;padding:14px;text-align:center;box-shadow:0 3px 0 rgba(0,0,0,.12)}
@@ -99,8 +100,13 @@ var DISK_URL="https://disk.yandex.ru/d/ptTBhsfZMhVHBg";
 var FILE_PATH="/Zebryata_site.xlsx";
 // ===================================
 
-// Публичный CORS-прокси KillCORS (стабильнее allorigins и cors.dev)
 function px(u){return "https://proxy.killcors.com/?url="+encodeURIComponent(u)}
+function fetchT(url,opts,ms){
+  ms=ms||25000;
+  var ctrl=new AbortController();
+  var t=setTimeout(function(){ctrl.abort()},ms);
+  return fetch(url,Object.assign({},opts||{},{signal:ctrl.signal})).finally(function(){clearTimeout(t)});
+}
 
 var DATA={collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]};
 var COLORS=["#ff8fab","#7ec8e3","#b5e48c","#c8a2c8","#ffd166","#9bd0a5"];
@@ -165,20 +171,39 @@ function confetti(){
     (function(x){setTimeout(function(){x.remove()},3400)})(s)}
 }
 
+// Умный поиск листа: игнорирует регистр, ё/е, лишние пробелы
+function normName(s){return String(s||"").trim().toLowerCase().replace(/ё/g,"е").replace(/\s+/g," ")}
+function findSheet(wb,variants){
+  var wanted=variants.map(normName);
+  for(var i=0;i<wb.SheetNames.length;i++){
+    if(wanted.indexOf(normName(wb.SheetNames[i]))>-1)return wb.SheetNames[i];
+  }
+  return null;
+}
+
 function parseXlsx(wb){
   var d={collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]};
-  function rows(n){if(wb.SheetNames.indexOf(n)<0)return [];return XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:""})}
-  rows("Финансы").forEach(function(r){
+  function rows(variants){
+    var name=findSheet(wb,variants);
+    if(!name)return [];
+    return XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:""});
+  }
+  rows(["Финансы","Finance"]).forEach(function(r){
     if(!r||!r[0])return;
     var k=String(r[0]).trim().toLowerCase(),v=num(r[1]);
-    if(k==="collected")d.collected=v;
-    if(k==="spent")d.spent=v;
-    if(k==="fee")d.fee=v;
+    if(k==="collected"||k==="собрано")d.collected=v;
+    if(k==="spent"||k==="потрачено")d.spent=v;
+    if(k==="fee"||k==="сбор")d.fee=v;
   });
-  rows("Категории").forEach(function(r){if(r&&r[0]&&r[1]!=="")d.cats.push([String(r[0]).trim(),num(r[1])])});
-  rows("Статусы").forEach(function(r){if(r&&r[0]&&r[1]!=="")d.status[String(r[0]).trim().toLowerCase()]=num(r[1])});
-  rows("Праздники").forEach(function(r){if(r&&r[0]&&r[1])d.holidays.push([String(r[0]),String(r[1]),String(r[2]||""),String(r[3]||"")])});
-  rows("Именинники").forEach(function(r){if(r&&r[0]&&r[1]!=="")d.months.push([String(r[0]).trim(),num(r[1])])});
+  rows(["Категории","Categories","Траты"]).forEach(function(r){if(r&&r[0]&&r[1]!=="")d.cats.push([String(r[0]).trim(),num(r[1])])});
+  rows(["Статусы","Status","Взносы"]).forEach(function(r){if(r&&r[0]&&r[1]!=="")d.status[String(r[0]).trim().toLowerCase()]=num(r[1])});
+  rows(["Праздники","Holidays","План"]).forEach(function(r){if(r&&r[0]&&r[1])d.holidays.push([String(r[0]),String(r[1]),String(r[2]||""),String(r[3]||"")])});
+  rows(["Именинники","Birthdays","ДР"]).forEach(function(r){if(r&&r[0]&&r[1]!=="")d.months.push([String(r[0]).trim(),num(r[1])])});
+
+  var empty = !(d.collected>0 || d.cats.length || Object.keys(d.status).length || d.holidays.length || d.months.length);
+  if(empty){
+    throw new Error("В файле найдены листы: ["+wb.SheetNames.join(" | ")+"]. Данные не прочитаны — проверьте названия листов или их содержимое.");
+  }
   return d;
 }
 
@@ -198,29 +223,32 @@ function sync(tryN){
   var ep1="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
   var ep2="https://cloud-api.yandex.net/v1/disk/public/resources?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
 
-  fetch(px(ep1),{cache:"no-store"})
+  fetchT(px(ep1),{cache:"no-store"})
     .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,body:t}})})
     .then(function(x){
       var j=null;try{j=JSON.parse(x.body)}catch(e){}
       if(x.ok&&j&&j.href)return j.href;
-      return fetch(px(ep2),{cache:"no-store"}).then(function(r){return r.json()}).then(function(m){
+      return fetchT(px(ep2),{cache:"no-store"}).then(function(r){return r.json()}).then(function(m){
         var f=m&&(m.file||(m._embedded&&m._embedded.items&&m._embedded.items[0]&&m._embedded.items[0].file));
         if(!f)throw new Error("Диск ответил "+x.status);
         return f;
       });
     })
-    .then(function(url){return fetch(px(url),{cache:"no-store"}).then(function(r){return r.arrayBuffer()})})
+    .then(function(url){return fetchT(px(url),{cache:"no-store"}).then(function(r){return r.arrayBuffer()})})
     .then(function(buf){
       var wb=XLSX.read(buf,{type:"array"});
+      // печатаем в консоль, чтобы можно было посмотреть
+      console.log("[Зебрята] Листы в файле:", wb.SheetNames);
+      wb.SheetNames.forEach(function(n){
+        console.log("[Зебрята] "+n+":", XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:""}).slice(0,5));
+      });
       var d=parseXlsx(wb);
-      if(!(d.collected>0||d.cats.length||Object.keys(d.status).length))
-        throw new Error("в таблице нет нужных листов");
       apply(d);
       badge("обновлено из Таблицы: "+new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),"ok");
     })
     .catch(function(e){
-      if(tryN<1){setTimeout(function(){sync(tryN+1)},30000);return}
-      badge(e.message+". Показаны запасные цифры","err");
+      if(e.name==="AbortError"){badge("Диск не ответил за 25 сек. Попробуйте обновить страницу","err");return}
+      badge(e.message,"dbg");
     });
 }
 
