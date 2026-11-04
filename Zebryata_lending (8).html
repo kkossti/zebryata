@@ -43,6 +43,7 @@ footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
 .confetti{position:fixed;top:-30px;font-size:22px;pointer-events:none;animation:fall 2.6s linear forwards;z-index:9}
 @keyframes fall{to{transform:translateY(105vh) rotate(720deg);opacity:.4}}
 </style>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <header>
@@ -51,14 +52,12 @@ footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
 <div id="sync">подключаюсь к Диску…</div>
 </header>
 <div class="wrap">
-
 <div class="cards">
 <div class="card g1"><div class="t">🦓 Собрано</div><div class="n" id="c1"></div></div>
 <div class="card g2"><div class="t">🎈 Потрачено</div><div class="n" id="c2"></div></div>
 <div class="card g3"><div class="t">💰 Остаток</div><div class="n" id="c3"></div></div>
 <div class="card g4"><div class="t">🌟 Общий сбор</div><div class="n" id="c4"></div></div>
 </div>
-
 <section class="parentbox">
 <h2>🔎 Для родителей</h2>
 <p>Общий сбор — <b>3 000 ₽</b> на ребёнка. Но вы можете прислать <b>любую сумму</b> — мы её обязательно учтём! Если пока нет возможности внести весь сбор, переведите сколько удобно, остаток — позже.</p>
@@ -67,25 +66,21 @@ footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
 <div id="result"></div>
 <div class="restnote" id="restnote"></div>
 </section>
-
 <section>
 <h2>📊 Траты по категориям</h2>
 <div id="bars"></div>
 <div id="donut"></div>
 <p style="text-align:center;font-size:12px;color:#999" id="spendnote"></p>
 </section>
-
 <section>
 <h2>🎉 План праздников</h2>
 <table><tbody id="hol"></tbody></table>
 </section>
-
 <section>
 <h2>🎂 Именинники по месяцам</h2>
 <div class="months" id="mon"></div>
 <p style="font-size:12px;color:#999;margin-top:8px">Имена не публикуем — по правилам защиты персональных данных. Поздравить можно в чате группы!</p>
 </section>
-
 <section>
 <h2>✅ Что уже сделано мамы нашей группы</h2>
 <ul class="done">
@@ -95,130 +90,137 @@ footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
 <li>💐 Поздравили воспитателя на День воспитателя</li>
 </ul>
 </section>
-
 <footer>Страничку сделала @kristinakossti 💛</footer>
 </div>
 
 <script>
-// ============ ССЫЛКА НА ПАПКУ НА ДИСКЕ (постоянная, не менять) ============
+// ============ НЕ МЕНЯТЬ ============
 var DISK_URL="https://disk.yandex.ru/d/ptTBhsfZMhVHBg";
-var FILE_PATH="/Zebryata_data.txt";
-// ==========================================================================
+var FILE_PATH="/Zebryata_site.xlsx";
+// ===================================
 
-var DATA={collected:52733,spent:28720,fee:3000,
-cats:[["Хозтовары",8165],["Подарки",7811],["Творчество",1544],["Угощение",1200]],
-status:{"абрамова":0,"акопян":0,"будник":0,"батенков":0,"ветрова":0,"нестерова":0,"игнатова":0,"карманова":0,"кошельник":0,"климков":0,"лазовская":0,"лысов":0,"караханов":0,"клепиков":0,"маслов":0,"минасян":0,"назаров":0,"ортукова":0,"семёнова":0,"семенова":0,"слобцова":1383,"стеценко":0,"урыта":0,"финашкина":252,"шарипов":252,"григорец":0,"точка":383,"ширенина":0},
-holidays:[["01.09.2026","Подарки детям на ДР","11 000","сделано"],["27.09.2026","День воспитателя","12 000","сделано"],["25.12.2026","Новогодний утренник","15 000","в плане"],["23.02.2027","День защитника Отечества","10 000","в плане"],["08.03.2027","Международный женский день","15 000","в плане"],["17.03.2027","День рождения воспитателя","8 000","в плане"],["21.05.2027","День рождения нянечки","8 000","в плане"]],
-months:[["Январь",2],["Февраль",2],["Март",2],["Апрель",0],["Май",4],["Июнь",0],["Июль",2],["Август",3],["Сентябрь",2],["Октябрь",5],["Ноябрь",5],["Декабрь",1]]};
-
+function px(u){return "https://api.allorigins.win/raw?url="+encodeURIComponent(u)}
+var DATA={collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]};
 var COLORS=["#ff8fab","#7ec8e3","#b5e48c","#c8a2c8","#ffd166","#9bd0a5"];
+
 function fmt(n){return Math.round(n).toLocaleString("ru-RU")+" \u20BD"}
 function badge(t,c){var b=document.getElementById("sync");b.textContent=t;b.className=c}
+function num(v){if(typeof v==="number")return v;if(v===null||v===undefined||v==="")return 0;return +String(v).replace(/[\s,]/g,"")||0}
+
 function render(){
- document.getElementById("c1").textContent=fmt(DATA.collected);
- document.getElementById("c2").textContent=fmt(DATA.spent);
- document.getElementById("c3").textContent=fmt(DATA.collected-DATA.spent);
- document.getElementById("c4").textContent=fmt(DATA.fee);
- var tot=0;DATA.cats.forEach(function(c){tot+=c[1]});
- var b=document.getElementById("bars");b.innerHTML="";
- DATA.cats.forEach(function(c,i){
- var p=Math.round(c[1]/tot*100);
- var d=document.createElement("div");d.className="bar";
- d.innerHTML="<span style='width:"+p+"%;background:"+COLORS[i%COLORS.length]+"'>"+c[0]+" — "+fmt(c[1])+" ("+p+"%)</span>";
- b.appendChild(d)});
- var g="",acc=0;
- DATA.cats.forEach(function(c,i){var a=acc;acc+=c[1];
- g+=COLORS[i%COLORS.length]+" "+(a/tot*100).toFixed(1)+"% "+(acc/tot*100).toFixed(1)+"%,"});
- g=g.replace(/,$/,"");
- document.getElementById("donut").style.background="conic-gradient("+g+")";
- var kids=Object.keys(DATA.status).length||1;
- document.getElementById("spendnote").textContent="Итого потрачено: "+fmt(DATA.spent)+" · на 1 ребёнка: "+(DATA.spent/kids).toFixed(2)+" \u20BD";
- var debt=0;for(var k in DATA.status)debt+=DATA.status[k];
- document.getElementById("restnote").textContent="\uD83D\uDCA1 Осталось внести по всей группе: "+fmt(debt)+". Перевод любой суммы — это уже помощь \uD83D\uDC9B";
- var h=document.getElementById("hol");h.innerHTML="";
- DATA.holidays.forEach(function(r){
- var tr=document.createElement("tr");
- var st=String(r[3]).toLowerCase().indexOf("сделано")>-1||String(r[3]).indexOf("подарили")>-1||String(r[3]).indexOf("поздравили")>-1?" ✅":"";
- tr.innerHTML="<td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+" \u20BD</td><td>"+r[3]+st+"</td>";
- h.appendChild(tr)});
- var m=document.getElementById("mon");m.innerHTML="";
- var now=new Date().getMonth();
- DATA.months.forEach(function(r,i){
- var d=document.createElement("div");d.className="month"+(i===now?" cur":"");
- d.innerHTML=r[0]+"<br><b>"+r[1]+"</b>"+(r[1]>0?" 🎂":"");
- m.appendChild(d)});
+  document.getElementById("c1").textContent=fmt(DATA.collected);
+  document.getElementById("c2").textContent=fmt(DATA.spent);
+  document.getElementById("c3").textContent=fmt(DATA.collected-DATA.spent);
+  document.getElementById("c4").textContent=fmt(DATA.fee);
+  var tot=0;DATA.cats.forEach(function(c){tot+=c[1]})||1;
+  var b=document.getElementById("bars");b.innerHTML="";
+  DATA.cats.forEach(function(c,i){
+    var p=Math.round(c[1]/tot*100);
+    var d=document.createElement("div");d.className="bar";
+    d.innerHTML="<span style='width:"+p+"%;background:"+COLORS[i%COLORS.length]+"'>"+c[0]+" — "+fmt(c[1])+" ("+p+"%)</span>";
+    b.appendChild(d)
+  });
+  var g="",acc=0;
+  DATA.cats.forEach(function(c,i){var a=acc;acc+=c[1];g+=COLORS[i%COLORS.length]+" "+(a/tot*100).toFixed(1)+"% "+(acc/tot*100).toFixed(1)+"%,"});
+  document.getElementById("donut").style.background="conic-gradient("+g.replace(/,$/,"")+")";
+  var kids=Object.keys(DATA.status).length||1;
+  document.getElementById("spendnote").textContent="Итого потрачено: "+fmt(DATA.spent)+" · на 1 ребёнка: "+(DATA.spent/kids).toFixed(2)+" \u20BD";
+  var debt=0;for(var k in DATA.status)debt+=DATA.status[k];
+  document.getElementById("restnote").textContent="\uD83D\uDCA1 Осталось внести по всей группе: "+fmt(debt)+". Перевод любой суммы — это уже помощь \uD83D\uDC9B";
+  var h=document.getElementById("hol");h.innerHTML="";
+  DATA.holidays.forEach(function(r){
+    var st=String(r[3]).toLowerCase().indexOf("сделано")>-1?" ✅":"";
+    var tr=document.createElement("tr");
+    tr.innerHTML="<td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+" \u20BD</td><td>"+r[3]+st+"</td>";
+    h.appendChild(tr)
+  });
+  var m=document.getElementById("mon");m.innerHTML="";
+  var now=new Date().getMonth();
+  DATA.months.forEach(function(r,i){
+    var d=document.createElement("div");d.className="month"+(i===now?" cur":"");
+    d.innerHTML=r[0]+"<br><b>"+r[1]+"</b>"+(r[1]>0?" 🎂":"");
+    m.appendChild(d)
+  });
 }
+
 function check(){
- var v=document.getElementById("fam").value.trim().toLowerCase();
- var r=document.getElementById("result");
- if(!v){r.textContent="Введите фамилию 🙂";return}
- var found=null;
- for(var k in DATA.status){if(k.indexOf(v)>-1||v.indexOf(k)>-1){found=k;break}}
- if(found===null){r.textContent="Фамилия не найдена — проверьте написание или напишите администратору";return}
- var d=DATA.status[found];
- if(d>0){r.textContent="🟠 Есть недоплата — "+fmt(d)+". Можно прислать любую сумму — мы её учтём 💛"}
- else{r.textContent="Всё сдано ✅";confetti()}
+  var v=document.getElementById("fam").value.trim().toLowerCase();
+  var r=document.getElementById("result");
+  if(!v){r.textContent="Введите фамилию 🙂";return}
+  var found=null;
+  for(var k in DATA.status){if(k.indexOf(v)>-1||v.indexOf(k)>-1){found=k;break}}
+  if(found===null){r.textContent="Фамилия не найдена — проверьте написание или напишите администратору";return}
+  var d=DATA.status[found];
+  if(d>0){r.textContent="🟠 Есть недоплата — "+fmt(d)+". Можно прислать любую сумму — мы её учтём 💛"}
+  else{r.textContent="Всё сдано ✅";confetti()}
 }
+
 function confetti(){
- var e=["\uD83C\uDF89","✨","\uD83D\uDC9B","\uD83E\uDD93"];
- for(var i=0;i<24;i++){var s=document.createElement("div");s.className="confetti";
- s.textContent=e[i%e.length];s.style.left=Math.random()*100+"vw";
- s.style.animationDelay=(Math.random()*0.8)+"s";document.body.appendChild(s);
- (function(x){setTimeout(function(){x.remove()},3400)})(s)}
+  var e=["\uD83C\uDF89","✨","\uD83D\uDC9B","\uD83E\uDD93"];
+  for(var i=0;i<24;i++){var s=document.createElement("div");s.className="confetti";
+    s.textContent=e[i%e.length];s.style.left=Math.random()*100+"vw";
+    s.style.animationDelay=(Math.random()*0.8)+"s";document.body.appendChild(s);
+    (function(x){setTimeout(function(){x.remove()},3400)})(s)}
 }
-function parse(txt){
- var d={collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]},sec="";
- txt.replace(/^\uFEFF/,"").split(/\r?\n/).forEach(function(l){
- l=l.trim();if(!l)return;
- if(l[0]==="["){sec=l.replace(/[]/g,"").trim().toUpperCase();return}
- var eq=l.indexOf("="),pipe=l.indexOf("|");
- if(sec==="ФИНАНСЫ"&&eq>0){var k=l.slice(0,eq).trim().toLowerCase(),v=+l.slice(eq+1).replace(/\s/g,"").trim();
- if(k==="collected")d.collected=v;if(k==="spent")d.spent=v;if(k==="fee")d.fee=v}
- else if(sec==="КАТЕГОРИИ"&&eq>0)d.cats.push([l.slice(0,eq).trim(),+l.slice(eq+1).replace(/\s/g,"").trim()]);
- else if(sec==="СТАТУСЫ"&&eq>0)d.status[l.slice(0,eq).trim().toLowerCase()]=+l.slice(eq+1).replace(/\s/g,"").trim();
- else if(sec==="ПРАЗДНИКИ"&&pipe>0)d.holidays.push(l.split("|").map(function(x){return x.trim()}));
- else if(sec==="ИМЕНИННИКИ"&&eq>0)d.months.push([l.slice(0,eq).trim(),+l.slice(eq+1).replace(/\s/g,"").trim()]);
- });
- return d;
+
+function parseXlsx(wb){
+  var d={collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]};
+  function rows(n){if(wb.SheetNames.indexOf(n)<0)return [];return XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:""})}
+  rows("Финансы").forEach(function(r){
+    if(!r||!r[0])return;
+    var k=String(r[0]).trim().toLowerCase(),v=num(r[1]);
+    if(k==="collected")d.collected=v;
+    if(k==="spent")d.spent=v;
+    if(k==="fee")d.fee=v;
+  });
+  rows("Категории").forEach(function(r){if(r&&r[0]&&r[1]!=="")d.cats.push([String(r[0]).trim(),num(r[1])])});
+  rows("Статусы").forEach(function(r){if(r&&r[0]&&r[1]!=="")d.status[String(r[0]).trim().toLowerCase()]=num(r[1])});
+  rows("Праздники").forEach(function(r){if(r&&r[0]&&r[1])d.holidays.push([String(r[0]),String(r[1]),String(r[2]||""),String(r[3]||"")])});
+  rows("Именинники").forEach(function(r){if(r&&r[0]&&r[1]!=="")d.months.push([String(r[0]).trim(),num(r[1])])});
+  return d;
 }
+
 function apply(d){
- if(d.collected>0)DATA.collected=d.collected;
- if(d.spent>0)DATA.spent=d.spent;
- if(d.fee>0)DATA.fee=d.fee;
- if(d.cats.length)DATA.cats=d.cats;
- if(d.holidays.length)DATA.holidays=d.holidays;
- if(d.months.length)DATA.months=d.months;
- for(var k in d.status)DATA.status[k]=d.status[k];
- render();
+  if(d.collected>0)DATA.collected=d.collected;
+  if(d.spent>0)DATA.spent=d.spent;
+  if(d.fee>0)DATA.fee=d.fee;
+  if(d.cats.length)DATA.cats=d.cats;
+  if(d.holidays.length)DATA.holidays=d.holidays;
+  if(d.months.length)DATA.months=d.months;
+  for(var k in d.status)DATA.status[k]=d.status[k];
+  render();
 }
-function tryFile(txt){
- var d=parse(txt);
- if(!(d.collected>0||d.cats.length||Object.keys(d.status).length))throw new Error("в файле нет строк вида collected=");
- apply(d);
- badge("обновлено с Диска: "+new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),"ok");
-}
+
 function sync(tryN){
- tryN=tryN||0;
- var ep1="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
- var ep2="https://cloud-api.yandex.net/v1/disk/public/resources?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
- fetch(ep1,{cache:"no-store"})
- .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,body:t}})})
- .then(function(x){
- var j=null;try{j=JSON.parse(x.body)}catch(e){}
- if(x.ok&&j&&j.href)return fetch(j.href,{cache:"no-store"}).then(function(r){return r.text()});
- return fetch(ep2,{cache:"no-store"}).then(function(r){return r.text()}).then(function(t2){
- var m=null;try{m=JSON.parse(t2)}catch(e){}
- var f=m&&(m.file||(m._embedded&&m._embedded.items&&m._embedded.items[0]&&m._embedded.items[0].file));
- if(!f)throw new Error("Диск ответил "+x.status+" и метаданные не дали ссылку");
- return fetch(f,{cache:"no-store"}).then(function(r){return r.text()});
- });
- })
- .then(function(txt){tryFile(txt)})
- .catch(function(e){
- if(tryN<1){setTimeout(function(){sync(tryN+1)},30000);return}
- badge(e.message+". Показаны запасные цифры","err");
- });
+  tryN=tryN||0;
+  var ep1="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
+  var ep2="https://cloud-api.yandex.net/v1/disk/public/resources?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
+  fetch(px(ep1),{cache:"no-store"})
+    .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,body:t}})})
+    .then(function(x){
+      var j=null;try{j=JSON.parse(x.body)}catch(e){}
+      if(x.ok&&j&&j.href)return j.href;
+      return fetch(px(ep2),{cache:"no-store"}).then(function(r){return r.json()}).then(function(m){
+        var f=m&&(m.file||(m._embedded&&m._embedded.items&&m._embedded.items[0]&&m._embedded.items[0].file));
+        if(!f)throw new Error("Диск ответил "+x.status);
+        return f;
+      });
+    })
+    .then(function(url){return fetch(px(url),{cache:"no-store"}).then(function(r){return r.arrayBuffer()})})
+    .then(function(buf){
+      var wb=XLSX.read(buf,{type:"array"});
+      var d=parseXlsx(wb);
+      if(!(d.collected>0||d.cats.length||Object.keys(d.status).length))
+        throw new Error("в таблице нет нужных листов");
+      apply(d);
+      badge("обновлено из Таблицы: "+new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),"ok");
+    })
+    .catch(function(e){
+      if(tryN<1){setTimeout(function(){sync(tryN+1)},30000);return}
+      badge(e.message+". Показаны запасные цифры","err");
+    });
 }
+
 render();
 sync();
 setInterval(sync, 6*60*60*1000);
