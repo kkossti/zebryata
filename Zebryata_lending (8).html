@@ -99,8 +99,8 @@ var DISK_URL="https://disk.yandex.ru/d/ptTBhsfZMhVHBg";
 var FILE_PATH="/Zebryata_site.xlsx";
 // ===================================
 
-// Публичный CORS-прокси (proxy.cors.dev — стабильнее, чем allorigins)
-function px(u){return "https://proxy.cors.dev/"+u}
+// Публичный CORS-прокси KillCORS (стабильнее allorigins и cors.dev)
+function px(u){return "https://proxy.killcors.com/?url="+encodeURIComponent(u)}
 
 var DATA={collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]};
 var COLORS=["#ff8fab","#7ec8e3","#b5e48c","#c8a2c8","#ffd166","#9bd0a5"];
