@@ -27,12 +27,18 @@ section h2{font-size:18px;margin-bottom:10px}
 .parentbox button{width:100%;padding:12px;font-size:17px;font-weight:bold;border:none;border-radius:12px;background:#e0a800;color:#fff}
 #result{margin-top:10px;font-size:16px;font-weight:bold;text-align:center}
 .restnote{margin-top:10px;font-size:14px;background:#fff;border-radius:12px;padding:8px 10px}
-.bar{background:#f0e6d8;border-radius:10px;height:24px;overflow:hidden;margin:8px 0}
-.bar span{display:block;height:100%;border-radius:10px;color:#fff;font-size:12px;line-height:24px;padding-left:8px;min-width:60px}
+
+/* Стили для красивых полосок */
+.bar-row { margin-bottom: 10px; }
+.bar-title { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; font-weight: bold; }
+.bar-bg { background: #f0e6d8; border-radius: 12px; height: 24px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; border-radius: 12px; display: flex; align-items: center; padding-left: 10px; color: #fff; font-size: 12px; white-space: nowrap; }
+
 #donut{width:150px;height:150px;border-radius:50%;margin:14px auto;position:relative}
 #donut::after{content:"";position:absolute;inset:35px;background:#fff;border-radius:50%}
-table{width:100%;border-collapse:collapse;font-size:14px}
-td,th{padding:7px;border-bottom:1px solid #eee;text-align:left}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:8px 4px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+th{color:#999;font-weight:normal;font-size:12px}
 .months{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .month{background:#fdf3e0;border-radius:14px;padding:10px;text-align:center;font-size:13px}
 .month.cur{background:#ffe4b8;outline:2px solid #e0a800}
@@ -59,7 +65,7 @@ footer a:hover{text-decoration:underline;color:#e0a800}
 </div>
 <section class="parentbox">
 <h2>🔎 Для родителей</h2>
-<p>Общий сбор — <b>3 000 ₽</b> на ребёнка. Но вы можете прислать <b>любую сумму</b> — мы её обязательно учтём! Если пока нет возможности внести весь сбор, переведите сколько удобно, остаток — позже.</p>
+<p>Общий сбор — <b>3 000 ₽</b> на ребёнка. Но вы можете прислать <b>любую сумму</b> — мы её обязательно учтём!</p>
 <input id="fam" placeholder="Введите фамилию ребёнка (например: финаш)">
 <button onclick="check()">Проверить взнос</button>
 <div id="result"></div>
@@ -73,15 +79,24 @@ footer a:hover{text-decoration:underline;color:#e0a800}
 </section>
 <section>
 <h2>🎉 План праздников</h2>
-<table><tbody id="hol"></tbody></table>
+<table>
+  <thead>
+    <tr>
+      <th>Дата</th>
+      <th>Название праздника</th>
+      <th>План, ₽</th>
+      <th>Факт, ₽</th>
+    </tr>
+  </thead>
+  <tbody id="hol"></tbody>
+</table>
 </section>
 <section>
 <h2>🎂 Именинники по месяцам</h2>
 <div class="months" id="mon"></div>
-<p style="font-size:12px;color:#999;margin-top:8px">Имена не публикуем — по правилам защиты персональных данных. Поздравить можно в чате группы!</p>
 </section>
 <section>
-<h2>✅ Что уже сделано мамы нашей группы</h2>
+<h2>✅ Что уже сделано</h2>
 <ul class="done">
 <li>🛠 Обновили группу: ковёр, швабра, коврик, звонок, метёлка</li>
 <li>🎁 Подарили детям: книжки, наклейки, пазлы, поп-ит</li>
@@ -90,9 +105,7 @@ footer a:hover{text-decoration:underline;color:#e0a800}
 </ul>
 </section>
 
-<!-- ВОТ ЗДЕСЬ ВАША ССЫЛКА -->
 <footer>Страничку сделала <a href="https://t.me/kristinaprotebya" target="_blank">kristinakossti</a> 💜</footer>
-
 </div>
 
 <script src="data.js"></script>
@@ -107,14 +120,27 @@ function render(){
   document.getElementById("c2").textContent=fmt(DATA.spent);
   document.getElementById("c3").textContent=fmt(DATA.collected-DATA.spent);
   document.getElementById("c4").textContent=fmt(DATA.fee);
-  var tot=0;DATA.cats.forEach(function(c){tot+=c[1]})||1;
+  
+  var tot=0; DATA.cats.forEach(function(c){tot+=c[1]});
   var b=document.getElementById("bars");b.innerHTML="";
+  
+  // Красивый рендер полосок
   DATA.cats.forEach(function(c,i){
-    var p=Math.round(c[1]/tot*100);
-    var d=document.createElement("div");d.className="bar";
-    d.innerHTML="<span style='width:"+p+"%;background:"+COLORS[i%COLORS.length]+"'>"+c[0]+" — "+fmt(c[1])+" ("+p+"%)</span>";
-    b.appendChild(d)
+    var p = tot > 0 ? Math.round(c[1]/tot*100) : 0;
+    var d = document.createElement("div");
+    d.className = "bar-row";
+    d.innerHTML = `
+      <div class="bar-title">
+        <span>${c[0]}</span>
+        <span>${fmt(c[1])} (${p}%)</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-fill" style="width:${p}%; background:${COLORS[i%COLORS.length]}"></div>
+      </div>
+    `;
+    b.appendChild(d);
   });
+
   var g="",acc=0;
   DATA.cats.forEach(function(c,i){var a=acc;acc+=c[1];g+=COLORS[i%COLORS.length]+" "+(a/tot*100).toFixed(1)+"% "+(acc/tot*100).toFixed(1)+"%,"});
   document.getElementById("donut").style.background="conic-gradient("+g.replace(/,$/,"")+")";
@@ -122,13 +148,15 @@ function render(){
   document.getElementById("spendnote").textContent="Итого потрачено: "+fmt(DATA.spent)+" · на 1 ребёнка: "+(DATA.spent/kids).toFixed(2)+" \u20BD";
   var debt=0;for(var k in DATA.status)debt+=DATA.status[k];
   document.getElementById("restnote").textContent="\uD83D\uDCA1 Осталось внести по всей группе: "+fmt(debt)+". Перевод любой суммы — это уже помощь \uD83D\uDC9B";
+
+  // Рендер таблицы праздников (4 колонки)
   var h=document.getElementById("hol");h.innerHTML="";
   DATA.holidays.forEach(function(r){
-    var st=String(r[3]).toLowerCase().indexOf("сделано")>-1?" ✅":"";
     var tr=document.createElement("tr");
-    tr.innerHTML="<td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+" \u20BD</td><td>"+r[3]+st+"</td>";
+    tr.innerHTML="<td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+"</td><td>"+r[3]+"</td>";
     h.appendChild(tr)
   });
+
   var m=document.getElementById("mon");m.innerHTML="";
   var now=new Date().getMonth();
   DATA.months.forEach(function(r,i){
@@ -142,7 +170,7 @@ function render(){
     var dt = new Date(DATA.updatedAt);
     badgeEl.textContent = "данные от " + dt.toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
   } else {
-    badgeEl.textContent = "данные из заглушки — ждём первой синхронизации";
+    badgeEl.textContent = "данные из заглушки — ждём синхронизации";
   }
 }
 
@@ -152,9 +180,9 @@ function check(){
   if(!v){r.textContent="Введите фамилию 🙂";return}
   var found=null;
   for(var k in DATA.status){if(k.indexOf(v)>-1||v.indexOf(k)>-1){found=k;break}}
-  if(found===null){r.textContent="Фамилия не найдена — проверьте написание или напишите администратору";return}
+  if(found===null){r.textContent="Фамилия не найдена";return}
   var d=DATA.status[found];
-  if(d>0){r.textContent="🟠 Есть недоплата — "+fmt(d)+". Можно прислать любую сумму — мы её учтём 💛"} 
+  if(d>0){r.textContent="🟠 Есть недоплата — "+fmt(d)} 
   else{r.textContent="Всё сдано ✅";confetti()}
 }
 
