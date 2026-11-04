@@ -1,4 +1,4 @@
-/* Автогенерировано GitHub Actions 2026-11-04T12:41:04.540Z */
+/* Автогенерировано GitHub Actions 2026-11-04T12:52:23.908Z */
 window.BUDGET_DATA = {
   "collected": 0,
   "spent": 0,
@@ -125,5 +125,5 @@ window.BUDGET_DATA = {
       0
     ]
   ],
-  "updatedAt": "2026-11-04T12:41:04.540Z"
+  "updatedAt": "2026-11-04T12:52:23.908Z"
 };
