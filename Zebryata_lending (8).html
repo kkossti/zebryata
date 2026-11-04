@@ -13,10 +13,7 @@ header h1{color:#fff;text-shadow:0 2px 4px #000;font-size:26px}
 @keyframes hop{0%,100%{transform:translateY(0)}30%{transform:translateY(-14px) rotate(-4deg)}60%{transform:translateY(0)}}
 .spin{animation:spin .6s linear!important}
 @keyframes spin{to{transform:rotate(360deg)}}
-#sync{margin-top:8px;font-size:12px;padding:4px 12px;border-radius:12px;display:inline-block;background:#e8e8e8;color:#666;max-width:95%;word-break:break-word}
-#sync.ok{background:#d4f7d4;color:#1c7c1c}
-#sync.err{background:#ffd6d6;color:#a11}
-#sync.dbg{background:#ffe8b8;color:#7a5500;font-size:11px;line-height:1.5;text-align:left}
+#sync{margin-top:8px;font-size:12px;padding:4px 12px;border-radius:12px;display:inline-block;background:#d4f7d4;color:#1c7c1c;max-width:95%;word-break:break-word}
 .wrap{max-width:640px;margin:0 auto;padding:0 14px}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
 .card{border-radius:20px;padding:14px;text-align:center;box-shadow:0 3px 0 rgba(0,0,0,.12)}
@@ -44,13 +41,12 @@ footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
 .confetti{position:fixed;top:-30px;font-size:22px;pointer-events:none;animation:fall 2.6s linear forwards;z-index:9}
 @keyframes fall{to{transform:translateY(105vh) rotate(720deg);opacity:.4}}
 </style>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <header>
 <div id="zebra" onclick="this.classList.add('spin');setTimeout(function(){this.classList.remove('spin')},600)">🦓</div>
 <h1>Бюджет группы «Зебрята»</h1>
-<div id="sync">подключаюсь к Диску…</div>
+<div id="sync">данные загружены</div>
 </header>
 <div class="wrap">
 <div class="cards">
@@ -94,26 +90,12 @@ footer{text-align:center;padding:18px;font-size:13px;color:#8a7a70}
 <footer>Страничку сделала @kristinakossti 💛</footer>
 </div>
 
+<script src="data.js"></script>
 <script>
-// ============ НЕ МЕНЯТЬ ============
-var DISK_URL="https://disk.yandex.ru/d/ptTBhsfZMhVHBg";
-var FILE_PATH="/Zebryata_site.xlsx";
-// ===================================
-
-function px(u){return "https://proxy.killcors.com/?url="+encodeURIComponent(u)}
-function fetchT(url,opts,ms){
-  ms=ms||25000;
-  var ctrl=new AbortController();
-  var t=setTimeout(function(){ctrl.abort()},ms);
-  return fetch(url,Object.assign({},opts||{},{signal:ctrl.signal})).finally(function(){clearTimeout(t)});
-}
-
-var DATA={collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]};
+var DATA = window.BUDGET_DATA || {collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]};
 var COLORS=["#ff8fab","#7ec8e3","#b5e48c","#c8a2c8","#ffd166","#9bd0a5"];
 
 function fmt(n){return Math.round(n).toLocaleString("ru-RU")+" \u20BD"}
-function badge(t,c){var b=document.getElementById("sync");b.textContent=t;b.className=c}
-function num(v){if(typeof v==="number")return v;if(v===null||v===undefined||v==="")return 0;return +String(v).replace(/[\s,]/g,"")||0}
 
 function render(){
   document.getElementById("c1").textContent=fmt(DATA.collected);
@@ -149,6 +131,14 @@ function render(){
     d.innerHTML=r[0]+"<br><b>"+r[1]+"</b>"+(r[1]>0?" 🎂":"");
     m.appendChild(d)
   });
+
+  var badgeEl = document.getElementById("sync");
+  if(DATA.updatedAt){
+    var dt = new Date(DATA.updatedAt);
+    badgeEl.textContent = "данные от " + dt.toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+  } else {
+    badgeEl.textContent = "данные из заглушки — ждём первой синхронизации";
+  }
 }
 
 function check(){
@@ -171,90 +161,7 @@ function confetti(){
     (function(x){setTimeout(function(){x.remove()},3400)})(s)}
 }
 
-// Умный поиск листа: игнорирует регистр, ё/е, лишние пробелы
-function normName(s){return String(s||"").trim().toLowerCase().replace(/ё/g,"е").replace(/\s+/g," ")}
-function findSheet(wb,variants){
-  var wanted=variants.map(normName);
-  for(var i=0;i<wb.SheetNames.length;i++){
-    if(wanted.indexOf(normName(wb.SheetNames[i]))>-1)return wb.SheetNames[i];
-  }
-  return null;
-}
-
-function parseXlsx(wb){
-  var d={collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]};
-  function rows(variants){
-    var name=findSheet(wb,variants);
-    if(!name)return [];
-    return XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:""});
-  }
-  rows(["Финансы","Finance"]).forEach(function(r){
-    if(!r||!r[0])return;
-    var k=String(r[0]).trim().toLowerCase(),v=num(r[1]);
-    if(k==="collected"||k==="собрано")d.collected=v;
-    if(k==="spent"||k==="потрачено")d.spent=v;
-    if(k==="fee"||k==="сбор")d.fee=v;
-  });
-  rows(["Категории","Categories","Траты"]).forEach(function(r){if(r&&r[0]&&r[1]!=="")d.cats.push([String(r[0]).trim(),num(r[1])])});
-  rows(["Статусы","Status","Взносы"]).forEach(function(r){if(r&&r[0]&&r[1]!=="")d.status[String(r[0]).trim().toLowerCase()]=num(r[1])});
-  rows(["Праздники","Holidays","План"]).forEach(function(r){if(r&&r[0]&&r[1])d.holidays.push([String(r[0]),String(r[1]),String(r[2]||""),String(r[3]||"")])});
-  rows(["Именинники","Birthdays","ДР"]).forEach(function(r){if(r&&r[0]&&r[1]!=="")d.months.push([String(r[0]).trim(),num(r[1])])});
-
-  var empty = !(d.collected>0 || d.cats.length || Object.keys(d.status).length || d.holidays.length || d.months.length);
-  if(empty){
-    throw new Error("В файле найдены листы: ["+wb.SheetNames.join(" | ")+"]. Данные не прочитаны — проверьте названия листов или их содержимое.");
-  }
-  return d;
-}
-
-function apply(d){
-  if(d.collected>0)DATA.collected=d.collected;
-  if(d.spent>0)DATA.spent=d.spent;
-  if(d.fee>0)DATA.fee=d.fee;
-  if(d.cats.length)DATA.cats=d.cats;
-  if(d.holidays.length)DATA.holidays=d.holidays;
-  if(d.months.length)DATA.months=d.months;
-  for(var k in d.status)DATA.status[k]=d.status[k];
-  render();
-}
-
-function sync(tryN){
-  tryN=tryN||0;
-  var ep1="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
-  var ep2="https://cloud-api.yandex.net/v1/disk/public/resources?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
-
-  fetchT(px(ep1),{cache:"no-store"})
-    .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,body:t}})})
-    .then(function(x){
-      var j=null;try{j=JSON.parse(x.body)}catch(e){}
-      if(x.ok&&j&&j.href)return j.href;
-      return fetchT(px(ep2),{cache:"no-store"}).then(function(r){return r.json()}).then(function(m){
-        var f=m&&(m.file||(m._embedded&&m._embedded.items&&m._embedded.items[0]&&m._embedded.items[0].file));
-        if(!f)throw new Error("Диск ответил "+x.status);
-        return f;
-      });
-    })
-    .then(function(url){return fetchT(px(url),{cache:"no-store"}).then(function(r){return r.arrayBuffer()})})
-    .then(function(buf){
-      var wb=XLSX.read(buf,{type:"array"});
-      // печатаем в консоль, чтобы можно было посмотреть
-      console.log("[Зебрята] Листы в файле:", wb.SheetNames);
-      wb.SheetNames.forEach(function(n){
-        console.log("[Зебрята] "+n+":", XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:""}).slice(0,5));
-      });
-      var d=parseXlsx(wb);
-      apply(d);
-      badge("обновлено из Таблицы: "+new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),"ok");
-    })
-    .catch(function(e){
-      if(e.name==="AbortError"){badge("Диск не ответил за 25 сек. Попробуйте обновить страницу","err");return}
-      badge(e.message,"dbg");
-    });
-}
-
 render();
-sync();
-setInterval(sync, 6*60*60*1000);
 </script>
 </body>
 </html>
