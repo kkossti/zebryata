@@ -99,7 +99,9 @@ var DISK_URL="https://disk.yandex.ru/d/ptTBhsfZMhVHBg";
 var FILE_PATH="/Zebryata_site.xlsx";
 // ===================================
 
-function px(u){return "https://api.allorigins.win/raw?url="+encodeURIComponent(u)}
+// Публичный CORS-прокси (proxy.cors.dev — стабильнее, чем allorigins)
+function px(u){return "https://proxy.cors.dev/"+u}
+
 var DATA={collected:0,spent:0,fee:0,cats:[],status:{},holidays:[],months:[]};
 var COLORS=["#ff8fab","#7ec8e3","#b5e48c","#c8a2c8","#ffd166","#9bd0a5"];
 
@@ -195,6 +197,7 @@ function sync(tryN){
   tryN=tryN||0;
   var ep1="https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
   var ep2="https://cloud-api.yandex.net/v1/disk/public/resources?public_key="+encodeURIComponent(DISK_URL)+"&path="+encodeURIComponent(FILE_PATH);
+
   fetch(px(ep1),{cache:"no-store"})
     .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,body:t}})})
     .then(function(x){
