@@ -1,6 +1,6 @@
 window.BUDGET_DATA = {
-  "collected": 52733,
-  "spent": 28720,
+  "collected": 53733,
+  "spent": 29780,
   "fee": 0,
   "cats": [
     [
@@ -17,7 +17,7 @@ window.BUDGET_DATA = {
     ],
     [
       "Угощение",
-      1200
+      2260
     ]
   ],
   "status": {
@@ -144,5 +144,5 @@ window.BUDGET_DATA = {
       1
     ]
   ],
-  "updatedAt": "2026-11-05T08:10:11.084Z"
+  "updatedAt": "2026-11-05T10:18:35.675Z"
 };
