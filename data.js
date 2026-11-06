@@ -144,5 +144,5 @@ window.BUDGET_DATA = {
       1
     ]
   ],
-  "updatedAt": "2026-11-06T04:45:06.242Z"
+  "updatedAt": "2026-11-06T05:46:42.516Z"
 };
